@@ -22,7 +22,7 @@ pub async fn process_pipeline(raw_text: String) -> SanitizationResult {
     // Stage 1: Deterministic Rule-Based Cleaner (<1ms)
     let stage1_output = stage1::clean_stage1(&raw_text);
 
-    // Stage 2: High-Speed Local LLM Distillation (with 3s hard timeout & Ollama fallback)
+    // Stage 2: Local LLM distillation with a bounded Ollama request
     let (distilled_output, is_distilled) = stage2::distill_stage2(&stage1_output).await;
 
     // Safety Pass: Re-run Stage 1 deterministic rules on LLM output to guarantee no leaked secrets

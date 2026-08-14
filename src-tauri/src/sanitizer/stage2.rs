@@ -3,31 +3,43 @@ use serde_json::Value;
 use tokio::time::timeout;
 
 const OLLAMA_BASE_URL: &str = "http://127.0.0.1:11434";
-const PRIMARY_MODEL: &str = "qwen2.5-coder";
+const PRIMARY_MODEL: &str = "qwen2.5:1.5b";
+const HEALTHCHECK_TIMEOUT: Duration = Duration::from_secs(1);
+const DISTILLATION_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// High-Speed Local LLM Distillation (Ollama Endpoint Bridge)
-/// Attempts local distillation via Ollama with a 10-second hard timeout.
-/// Fallback: If model inference fails, times out (>10s), or Ollama is offline,
-/// gracefully falls back to the Stage 1 rule-cleaned text.
+/// Checks if Ollama is online and attempts local distillation with a bounded timeout.
 pub async fn distill_stage2(stage1_text: &str) -> (String, bool) {
     let trimmed = stage1_text.trim();
     if trimmed.is_empty() {
         return (String::new(), false);
     }
 
-    // Fast path: if input is short (< 30 chars or single line < 60 chars),
+    // Fast path 1: if input is short (< 30 chars or single line < 60 chars),
     // distillation adds no value and we avoid wasting LLM inference overhead.
     if trimmed.len() < 30 || (!trimmed.contains('\n') && trimmed.len() < 60) {
         return (stage1_text.to_string(), false);
     }
 
-    // Attempt local LLM distillation with a 10000ms timeout
-    let timeout_duration = Duration::from_millis(10000);
+    let installed_model = match is_ollama_online_and_get_model().await {
+        Some(model) => model,
+        None => return (stage1_text.to_string(), false),
+    };
 
-    match timeout(timeout_duration, query_ollama_distillation(stage1_text)).await {
+    match timeout(
+        DISTILLATION_TIMEOUT,
+        query_ollama_distillation(stage1_text, &installed_model),
+    )
+    .await
+    {
         Ok(Ok(distilled)) if !distilled.trim().is_empty() => {
             let cleaned = clean_llm_output(&distilled);
-            if !cleaned.is_empty() && cleaned != stage1_text {
+
+            // Safety Retention Threshold: Ensure the LLM didn't over-summarize/strip essential context.
+            // Distilled text must retain at least 20% of original character length (or at least 30 chars).
+            let min_expected_len = (trimmed.len() as f64 * 0.20).max(30.0) as usize;
+
+            if !cleaned.is_empty() && cleaned != stage1_text && cleaned.len() >= min_expected_len {
                 (cleaned, true)
             } else {
                 (stage1_text.to_string(), false)
@@ -41,26 +53,23 @@ pub async fn distill_stage2(stage1_text: &str) -> (String, bool) {
 }
 
 /// Queries local Ollama endpoint (http://127.0.0.1:11434)
-async fn query_ollama_distillation(input: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn query_ollama_distillation(input: &str, model_name: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(9500))
+        .timeout(DISTILLATION_TIMEOUT)
         .build()?;
 
     let prompt = format!(
-        "Compress the following error log into a minimal, essential error summary. Remove all boilerplate, timestamps, and redundant stack frames. Output ONLY the core error details.\n\nLOG:\n{}",
+        "You are an expert log and code sanitizer. Your job is NOT to summarize or shorten the text arbitrarily. Keep all critical error messages, stack trace lines, exception types, line numbers, and relevant technical context intact. Only remove high-entropy secret noise, redundant repetitive lines, and unneeded framework wrapper stack frames. Do not add markdown explanations or conversational text. Output the sanitized log directly.\n\nLOG:\n{}",
         input
     );
 
-    // 1. Determine target model using fast tag lookup
-    let model_name = get_working_ollama_model().await;
-
-    // 2. Query Ollama native /api/generate endpoint
+    // 1. Query Ollama native /api/generate endpoint
     let ollama_payload = serde_json::json!({
         "model": model_name,
         "prompt": prompt,
         "stream": false,
         "options": {
-            "num_predict": 256,
+            "num_predict": 512,
             "temperature": 0.1
         }
     });
@@ -78,14 +87,17 @@ async fn query_ollama_distillation(input: &str) -> Result<String, Box<dyn std::e
         }
     }
 
-    // 3. Fallback: Query Ollama's OpenAI-compatible /v1/chat/completions endpoint
+    // 2. Fallback: Query Ollama's OpenAI-compatible /v1/chat/completions endpoint
     let chat_payload = serde_json::json!({
         "model": model_name,
         "messages": [
-            {"role": "system", "content": "You are a log sanitizer context extractor. Extract only the essential error message and minimal reproduction log. No markdown explanations or conversational text."},
+            {
+                "role": "system",
+                "content": "You are an expert log and code sanitizer. Your job is NOT to summarize or shorten the text arbitrarily. Keep all critical error messages, stack trace lines, exception types, and technical context intact. Only remove high-entropy noise, redundant lines, and framework wrapper frames. Output the sanitized log directly without conversational filler or markdown wrapper."
+            },
             {"role": "user", "content": input}
         ],
-        "max_tokens": 256,
+        "max_tokens": 512,
         "temperature": 0.1
     });
 
@@ -105,41 +117,42 @@ async fn query_ollama_distillation(input: &str) -> Result<String, Box<dyn std::e
     Err("Ollama distillation query failed or returned empty response".into())
 }
 
-/// Discovers installed Ollama models via /api/tags using a fast 800ms client
-async fn get_working_ollama_model() -> String {
-    let fast_client = match reqwest::Client::builder()
-        .timeout(Duration::from_millis(800))
+/// Verifies that Ollama is online and returns an installed model name.
+async fn is_ollama_online_and_get_model() -> Option<String> {
+    let ping_client = match reqwest::Client::builder()
+        .timeout(HEALTHCHECK_TIMEOUT)
         .build()
     {
         Ok(c) => c,
-        Err(_) => return PRIMARY_MODEL.to_string(),
+        Err(_) => return None,
     };
 
     let tags_url = format!("{}/api/tags", OLLAMA_BASE_URL);
-    if let Ok(res) = fast_client.get(&tags_url).send().await {
+    if let Ok(res) = ping_client.get(&tags_url).send().await {
         if res.status().is_success() {
             if let Ok(json) = res.json::<Value>().await {
                 if let Some(models) = json.get("models").and_then(|m| m.as_array()) {
-                    // Check if primary model is installed
-                    for model in models {
-                        if let Some(name) = model.get("name").and_then(|n| n.as_str()) {
-                            if name.contains(PRIMARY_MODEL) {
-                                return name.to_string();
-                            }
-                        }
-                    }
-                    // Primary model not found; fallback to first available installed model
-                    if let Some(first) = models.first() {
-                        if let Some(name) = first.get("name").and_then(|n| n.as_str()) {
-                            return name.to_string();
-                        }
-                    }
+                    return select_model(models);
                 }
             }
         }
     }
 
-    PRIMARY_MODEL.to_string()
+    None
+}
+
+fn select_model(models: &[Value]) -> Option<String> {
+    models
+        .iter()
+        .filter_map(|model| model.get("name").and_then(Value::as_str))
+        .find(|name| *name == PRIMARY_MODEL)
+        .or_else(|| {
+            models
+                .iter()
+                .filter_map(|model| model.get("name").and_then(Value::as_str))
+                .next()
+        })
+        .map(str::to_owned)
 }
 
 /// Cleans raw LLM outputs (removes wrapping ```codeblocks``` and leading/trailing whitespace)
@@ -201,12 +214,19 @@ mod tests {
         assert!(!is_distilled);
     }
 
-    #[tokio::test]
-    async fn test_distill_offline_fallback() {
-        let long_input = "2026-08-14T16:00:00Z [ERROR] Failed connection to database\nLine 2 info\nLine 3 trace details";
-        let (output, is_distilled) = distill_stage2(long_input).await;
-        assert_eq!(output, long_input);
-        assert!(!is_distilled);
+    #[test]
+    fn test_select_model_prefers_primary() {
+        let models = vec![
+            serde_json::json!({ "name": "gemma4:e4b" }),
+            serde_json::json!({ "name": PRIMARY_MODEL }),
+        ];
+
+        assert_eq!(select_model(&models).as_deref(), Some(PRIMARY_MODEL));
+    }
+
+    #[test]
+    fn test_select_model_requires_installed_model() {
+        assert_eq!(select_model(&[]), None);
     }
 }
 

@@ -11,7 +11,7 @@ It strips secrets, API keys, memory addresses, timestamps, ANSI colors, and stac
 - ⚡ **Global Shortcut (`Cmd + Shift + S`)**: Automatically reads raw clipboard text, sanitizes it, writes clean text back to the clipboard, and triggers the HUD.
 - 🚀 **Two-Stage Sanitization Engine**:
   - **Stage 1 (Rule Cleaner <1ms)**: Strips ANSI escape codes, high-entropy secrets (OpenAI `sk-...`, AWS `AKIA...`, GitHub tokens, Bearer tokens, PEM private keys, Slack webhooks, DB URIs), ISO timestamps (`<TIME>`), hex memory pointers (`<ADDR>`), Base64/JWT data, framework stack trace frames (`node_modules`, `site-packages`, etc.), and collapses duplicate log lines (`Repeated Nx`).
-  - **Stage 2 (Local LLM Distillation)**: Connects to local LLM models (Ollama, llama-cpp server) to extract core error context. Features a hard **3-second timeout** with automatic fallback to Stage 1 text.
+  - **Stage 2 (Local LLM Distillation)**: Connects to a local Ollama model to extract core error context. Features a hard **15-second timeout** with automatic fallback to Stage 1 text.
 - 📊 **Token Stats & Unified Diff**: BPE token counting (`142 → 48 tokens (-66%)`) and collapsible line-by-line unified diff preview (red for removed secrets/junk, green for kept context).
 - 🪟 **Non-Activating Floating Pill HUD**: macOS `NSPanel` floating window positioned top-center that **never steals focus** from your terminal or IDE.
 
@@ -86,14 +86,14 @@ You can also run the built binary directly:
 
 ## 🤖 Optional: Local LLM Distillation (Stage 2)
 
-If you have [Ollama](https://ollama.com) or `llama-server` running locally:
+If you have [Ollama](https://ollama.com) running locally:
 
 ```bash
 # Run local model for Stage 2 distillation
-ollama run qwen2.5-coder
+ollama run qwen2.5:1.5b
 ```
 
-SanitAgent will automatically detect Ollama at `http://127.0.0.1:11434` or llama-server at `http://127.0.0.1:8080`. If no local LLM is running or if inference takes longer than 3 seconds, SanitAgent instantly falls back to Stage 1 rule-cleaned text.
+SanitAgent will automatically detect Ollama at `http://127.0.0.1:11434`. If Ollama has no installed models, is unavailable, or inference takes longer than 15 seconds, SanitAgent falls back to Stage 1 rule-cleaned text.
 
 ---
 
@@ -122,7 +122,7 @@ sanitagent/
 │   ├── src/
 │   │   ├── sanitizer/
 │   │   │   ├── stage1.rs         # Rule cleaner (<1ms deterministic regex rules)
-│   │   │   ├── stage2.rs         # Local LLM distillation worker with 3s timeout
+│   │   │   ├── stage2.rs         # Local LLM distillation worker with 15s timeout
 │   │   │   ├── tokens.rs         # BPE token counter & reduction stats
 │   │   │   └── diff.rs           # Unified diff generator (`similar` crate)
 │   │   ├── window.rs             # macOS NSPanel non-activating floating window setup
