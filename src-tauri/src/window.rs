@@ -38,7 +38,7 @@ pub fn position_top_center(_app: &AppHandle, window: &WebviewWindow) {
         let monitor_size = monitor.size();
         let scale_factor = monitor.scale_factor();
 
-        let window_size = window.outer_size().unwrap_or(tauri::PhysicalSize::new(560, 480));
+        let window_size = window.outer_size().unwrap_or(tauri::PhysicalSize::new(900, 580));
 
         let monitor_width = monitor_size.width as f64 / scale_factor;
         let window_width = window_size.width as f64 / scale_factor;
