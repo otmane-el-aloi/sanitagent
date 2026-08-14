@@ -86,7 +86,7 @@ export const HUD: React.FC<HUDProps> = ({
               isDistilled={result.is_distilled}
             />
           ) : (
-            <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono bg-zinc-900/60 border border-zinc-800/80 px-2.5 py-1 rounded-full">
+            <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full">
               <Command className="w-3 h-3 text-zinc-400" />
               <span>Cmd + Shift + S</span>
             </div>
@@ -96,7 +96,7 @@ export const HUD: React.FC<HUDProps> = ({
         {/* Right: Copied Badge, Diff Toggle & Controls */}
         <div className="flex items-center gap-2 shrink-0">
           {result && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full whitespace-nowrap">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-950 border border-emerald-800/50 px-2.5 py-0.5 rounded-full whitespace-nowrap">
               <Check className="w-3 h-3" />
               Copied
             </span>

@@ -24,9 +24,9 @@ export const DiffView: React.FC<DiffViewProps> = ({ diffLines, sanitizedText }) 
     : diffLines;
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-full bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl">
       {/* Diff Toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/90 border-b border-zinc-800/80">
+      <div className="flex items-center justify-between px-3 py-2 bg-zinc-900 border-b border-zinc-800">
         <div className="flex items-center gap-2 text-xs font-medium text-zinc-300">
           <FileText className="w-3.5 h-3.5 text-zinc-400" />
           <span>Unified Diff Preview</span>
@@ -76,16 +76,16 @@ export const DiffView: React.FC<DiffViewProps> = ({ diffLines, sanitizedText }) 
           </div>
         ) : (
           filteredLines.map((line, idx) => {
-            let bgClass = "hover:bg-zinc-900/50 text-zinc-300";
+            let bgClass = "hover:bg-zinc-900 text-zinc-300";
             let prefixChar = " ";
             let prefixColor = "text-zinc-600";
 
             if (line.change_type === "delete") {
-              bgClass = "bg-red-950/40 text-red-300/90 border-l-2 border-red-500/70 font-semibold";
+              bgClass = "bg-red-950 text-red-300 border-l-2 border-red-500 font-semibold";
               prefixChar = "-";
               prefixColor = "text-red-400 font-bold";
             } else if (line.change_type === "add") {
-              bgClass = "bg-emerald-950/40 text-emerald-300/90 border-l-2 border-emerald-500/70 font-semibold";
+              bgClass = "bg-emerald-950 text-emerald-300 border-l-2 border-emerald-500 font-semibold";
               prefixChar = "+";
               prefixColor = "text-emerald-400 font-bold";
             }

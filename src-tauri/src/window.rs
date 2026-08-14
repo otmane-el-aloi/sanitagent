@@ -23,7 +23,7 @@ pub fn configure_hud_window(window: &WebviewWindow) {
                 | NSWindowCollectionBehavior::IgnoresCycle;
             ns_window.setCollectionBehavior(collection_behavior);
 
-            ns_window.setHasShadow(true);
+            ns_window.setHasShadow(false);
         }
     }
 }

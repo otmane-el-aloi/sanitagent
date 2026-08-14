@@ -24,7 +24,7 @@
         "resizable": false,
         "center": false,
         "visible": true,
-        "shadow": true
+        "shadow": false
       }
     ],
     "security": {

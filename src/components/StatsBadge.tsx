@@ -13,11 +13,11 @@ export const StatsBadge: React.FC<StatsBadgeProps> = ({
   latencyMs,
 }) => {
   return (
-    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900/90 border border-white/10 text-xs font-mono text-zinc-300 whitespace-nowrap shadow-sm">
+    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono text-zinc-300 whitespace-nowrap shadow-sm">
       <span className="text-zinc-200 font-medium">
         {stats.raw_tokens} → {stats.sanitized_tokens} tokens
       </span>
-      <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded-md text-[11px]">
+      <span className="text-emerald-400 font-semibold bg-emerald-950 border border-emerald-800/50 px-1.5 py-0.5 rounded-md text-[11px]">
         -{stats.reduction_percent}%
       </span>
       {latencyMs > 0 && (
