@@ -3346,7 +3346,6 @@ dependencies = [
 name = "sanitagent"
 version = "0.1.0"
 dependencies = [
- "arboard",
  "lazy_static",
  "objc2",
  "objc2-app-kit",

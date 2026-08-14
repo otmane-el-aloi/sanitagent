@@ -1,7 +1,7 @@
 use tauri::{AppHandle, WebviewWindow};
 
 #[cfg(target_os = "macos")]
-use objc2_app_kit::{NSFloatingWindowLevel, NSWindow, NSWindowCollectionBehavior};
+use objc2_app_kit::{NSColor, NSFloatingWindowLevel, NSWindow, NSWindowCollectionBehavior};
 
 /// Configures the macOS HUD window as a non-activating floating NSPanel top-center.
 pub fn configure_hud_window(window: &WebviewWindow) {
@@ -11,6 +11,9 @@ pub fn configure_hud_window(window: &WebviewWindow) {
     unsafe {
         let ptr = window.ns_window().unwrap() as *mut NSWindow;
         if let Some(ns_window) = ptr.as_ref() {
+            ns_window.setOpaque(false);
+            ns_window.setBackgroundColor(Some(&NSColor::clearColor()));
+
             // Set floating window level (NSFloatingWindowLevel = 5)
             ns_window.setLevel(NSFloatingWindowLevel);
 

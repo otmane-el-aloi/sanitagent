@@ -4,7 +4,6 @@
 mod sanitizer;
 mod window;
 
-use arboard::Clipboard;
 use sanitizer::SanitizationResult;
 use std::sync::Mutex;
 use tauri::{
@@ -12,6 +11,7 @@ use tauri::{
     tray::TrayIconBuilder,
     AppHandle, Emitter, Manager, State,
 };
+use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 pub struct AppState {
@@ -19,13 +19,15 @@ pub struct AppState {
 }
 
 #[tauri::command]
-async fn sanitize_text(text: String, state: State<'_, AppState>) -> Result<SanitizationResult, String> {
+async fn sanitize_text(
+    app: AppHandle,
+    text: String,
+    state: State<'_, AppState>,
+) -> Result<SanitizationResult, String> {
     let result = sanitizer::process_pipeline(text).await;
 
     // Automatically copy sanitized result back to OS clipboard
-    if let Ok(mut clipboard) = Clipboard::new() {
-        let _ = clipboard.set_text(&result.sanitized_text);
-    }
+    let _ = app.clipboard().write_text(&result.sanitized_text);
 
     if let Ok(mut guard) = state.last_result.lock() {
         *guard = Some(result.clone());
@@ -39,8 +41,10 @@ async fn read_and_sanitize_clipboard(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<SanitizationResult, String> {
-    let mut clipboard = Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
-    let raw_text = clipboard.get_text().map_err(|e| format!("Clipboard read error: {}", e))?;
+    let raw_text = app
+        .clipboard()
+        .read_text()
+        .map_err(|e| format!("Clipboard read error: {}", e))?;
 
     if raw_text.trim().is_empty() {
         return Err("Clipboard is empty".to_string());
@@ -49,7 +53,9 @@ async fn read_and_sanitize_clipboard(
     let result = sanitizer::process_pipeline(raw_text).await;
 
     // Write sanitized text back to clipboard
-    let _ = clipboard.set_text(&result.sanitized_text);
+    app.clipboard()
+        .write_text(&result.sanitized_text)
+        .map_err(|e| format!("Clipboard write error: {}", e))?;
 
     if let Ok(mut guard) = state.last_result.lock() {
         *guard = Some(result.clone());
@@ -79,25 +85,32 @@ fn hide_hud(app: AppHandle) {
 
 fn trigger_clipboard_sanitization(app: &AppHandle) {
     let app_handle = app.clone();
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let state = app_handle.state::<AppState>();
-        if let Ok(mut clipboard) = Clipboard::new() {
-            if let Ok(raw_text) = clipboard.get_text() {
-                if !raw_text.trim().is_empty() {
-                    let result = sanitizer::process_pipeline(raw_text).await;
-                    let _ = clipboard.set_text(&result.sanitized_text);
+        let Ok(raw_text) = app_handle.clipboard().read_text() else {
+            return;
+        };
+        if raw_text.trim().is_empty() {
+            return;
+        }
 
-                    if let Ok(mut guard) = state.last_result.lock() {
-                        *guard = Some(result.clone());
-                    }
+        let result = sanitizer::process_pipeline(raw_text).await;
+        if app_handle
+            .clipboard()
+            .write_text(&result.sanitized_text)
+            .is_err()
+        {
+            return;
+        }
 
-                    if let Some(window) = app_handle.get_webview_window("main") {
-                        window::position_top_center(&app_handle, &window);
-                        let _ = window.show();
-                        let _ = app_handle.emit("sanitization-complete", &result);
-                    }
-                }
-            }
+        if let Ok(mut guard) = state.last_result.lock() {
+            *guard = Some(result.clone());
+        }
+
+        if let Some(window) = app_handle.get_webview_window("main") {
+            window::position_top_center(&app_handle, &window);
+            let _ = window.show();
+            let _ = app_handle.emit("sanitization-complete", &result);
         }
     });
 }
