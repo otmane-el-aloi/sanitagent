@@ -1,5 +1,5 @@
-use std::time::Duration;
 use serde_json::Value;
+use std::time::Duration;
 use tokio::time::timeout;
 
 const OLLAMA_BASE_URL: &str = "http://127.0.0.1:11434";
@@ -53,7 +53,10 @@ pub async fn distill_stage2(stage1_text: &str) -> (String, bool) {
 }
 
 /// Queries local Ollama endpoint (http://127.0.0.1:11434)
-async fn query_ollama_distillation(input: &str, model_name: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn query_ollama_distillation(
+    input: &str,
+    model_name: &str,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     let client = reqwest::Client::builder()
         .timeout(DISTILLATION_TIMEOUT)
         .build()?;
@@ -75,7 +78,12 @@ async fn query_ollama_distillation(input: &str, model_name: &str) -> Result<Stri
     });
 
     let generate_url = format!("{}/api/generate", OLLAMA_BASE_URL);
-    if let Ok(res) = client.post(&generate_url).json(&ollama_payload).send().await {
+    if let Ok(res) = client
+        .post(&generate_url)
+        .json(&ollama_payload)
+        .send()
+        .await
+    {
         if res.status().is_success() {
             if let Ok(json) = res.json::<Value>().await {
                 if let Some(text) = json.get("response").and_then(|v| v.as_str()) {
@@ -187,7 +195,10 @@ mod tests {
     #[test]
     fn test_clean_llm_output_markdown_fence() {
         let raw = "```text\nError: connection failed\n    at main.js:10\n```";
-        assert_eq!(clean_llm_output(raw), "Error: connection failed\n    at main.js:10");
+        assert_eq!(
+            clean_llm_output(raw),
+            "Error: connection failed\n    at main.js:10"
+        );
 
         let raw2 = "```log\n[ERROR] Database timeout\n```";
         assert_eq!(clean_llm_output(raw2), "[ERROR] Database timeout");
@@ -229,4 +240,3 @@ mod tests {
         assert_eq!(select_model(&[]), None);
     }
 }
-

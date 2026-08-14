@@ -57,19 +57,41 @@ pub fn clean_stage1(input: &str) -> String {
     let mut text = ANSI_REGEX.replace_all(input, "").to_string();
 
     // Step 2: Redact High-Entropy Secrets & API Keys
-    text = PRIVATE_KEY_REGEX.replace_all(&text, "[REDACTED_PRIVATE_KEY]").to_string();
-    text = OPENAI_KEY_REGEX.replace_all(&text, "[REDACTED_OPENAI_KEY]").to_string();
-    text = AWS_KEY_REGEX.replace_all(&text, "[REDACTED_AWS_KEY]").to_string();
-    text = AWS_SECRET_REGEX.replace_all(&text, "$1: \"[REDACTED_AWS_SECRET]\"").to_string();
-    text = GITHUB_TOKEN_REGEX.replace_all(&text, "[REDACTED_GITHUB_TOKEN]").to_string();
-    text = BEARER_REGEX.replace_all(&text, "Bearer [REDACTED_BEARER_TOKEN]").to_string();
-    text = SLACK_WEBHOOK_REGEX.replace_all(&text, "[REDACTED_SLACK_WEBHOOK]").to_string();
-    text = GENERIC_SECRET_REGEX.replace_all(&text, "$1\"[REDACTED_SECRET]\"").to_string();
-    text = GENERIC_SECRET_KV_REGEX.replace_all(&text, "$1=[REDACTED_SECRET]").to_string();
-    text = DB_URI_REGEX.replace_all(&text, "$1://$2:[REDACTED_PASS]@").to_string();
+    text = PRIVATE_KEY_REGEX
+        .replace_all(&text, "[REDACTED_PRIVATE_KEY]")
+        .to_string();
+    text = OPENAI_KEY_REGEX
+        .replace_all(&text, "[REDACTED_OPENAI_KEY]")
+        .to_string();
+    text = AWS_KEY_REGEX
+        .replace_all(&text, "[REDACTED_AWS_KEY]")
+        .to_string();
+    text = AWS_SECRET_REGEX
+        .replace_all(&text, "$1: \"[REDACTED_AWS_SECRET]\"")
+        .to_string();
+    text = GITHUB_TOKEN_REGEX
+        .replace_all(&text, "[REDACTED_GITHUB_TOKEN]")
+        .to_string();
+    text = BEARER_REGEX
+        .replace_all(&text, "Bearer [REDACTED_BEARER_TOKEN]")
+        .to_string();
+    text = SLACK_WEBHOOK_REGEX
+        .replace_all(&text, "[REDACTED_SLACK_WEBHOOK]")
+        .to_string();
+    text = GENERIC_SECRET_REGEX
+        .replace_all(&text, "$1\"[REDACTED_SECRET]\"")
+        .to_string();
+    text = GENERIC_SECRET_KV_REGEX
+        .replace_all(&text, "$1=[REDACTED_SECRET]")
+        .to_string();
+    text = DB_URI_REGEX
+        .replace_all(&text, "$1://$2:[REDACTED_PASS]@")
+        .to_string();
 
     // Step 3: Truncate Heavy Data URIs & JWTs
-    text = BASE64_DATA_URI_REGEX.replace_all(&text, "<BASE64_DATA truncated>").to_string();
+    text = BASE64_DATA_URI_REGEX
+        .replace_all(&text, "<BASE64_DATA truncated>")
+        .to_string();
     text = JWT_REGEX.replace_all(&text, "<JWT truncated>").to_string();
 
     // Step 4: Normalize ISO Timestamps & Hex Memory Pointers
@@ -114,13 +136,18 @@ fn prune_stack_frames(lines: &[&str]) -> Vec<String> {
             || trimmed.contains(".java:")
             || trimmed.contains(".rs:");
 
-        let matches_internal = internal_patterns.iter().any(|pattern| line.contains(pattern));
+        let matches_internal = internal_patterns
+            .iter()
+            .any(|pattern| line.contains(pattern));
 
         if is_stack_frame && matches_internal {
             skipped_count += 1;
         } else {
             if skipped_count > 0 {
-                result.push(format!("    ... [Pruned {} framework stack frames]", skipped_count));
+                result.push(format!(
+                    "    ... [Pruned {} framework stack frames]",
+                    skipped_count
+                ));
                 skipped_count = 0;
             }
             result.push(line.to_string());
@@ -128,7 +155,10 @@ fn prune_stack_frames(lines: &[&str]) -> Vec<String> {
     }
 
     if skipped_count > 0 {
-        result.push(format!("    ... [Pruned {} framework stack frames]", skipped_count));
+        result.push(format!(
+            "    ... [Pruned {} framework stack frames]",
+            skipped_count
+        ));
     }
 
     result
