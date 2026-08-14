@@ -65,6 +65,7 @@ async fn read_and_sanitize_clipboard(
     if let Some(window) = app.get_webview_window("main") {
         window::position_top_center(&app, &window);
         let _ = window.show();
+        let _ = window.set_focus();
         let _ = app.emit("sanitization-complete", &result);
     }
 
@@ -110,6 +111,7 @@ fn trigger_clipboard_sanitization(app: &AppHandle) {
         if let Some(window) = app_handle.get_webview_window("main") {
             window::position_top_center(&app_handle, &window);
             let _ = window.show();
+            let _ = window.set_focus();
             let _ = app_handle.emit("sanitization-complete", &result);
         }
     });
@@ -129,6 +131,7 @@ fn main() {
             // Configure floating non-activating NSPanel window
             window::configure_hud_window(&window);
             window::position_top_center(app.handle(), &window);
+            let _ = window.show();
 
             // Register System Tray
             let quit_item = MenuItem::with_id(app, "quit", "Quit SanitAgent", true, None::<&str>).unwrap();

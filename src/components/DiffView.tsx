@@ -24,7 +24,7 @@ export const DiffView: React.FC<DiffViewProps> = ({ diffLines, sanitizedText }) 
     : diffLines;
 
   return (
-    <div className="flex flex-col h-full bg-zinc-950/95 border border-zinc-800/90 rounded-xl overflow-hidden shadow-2xl backdrop-blur-md">
+    <div className="flex flex-col h-full bg-zinc-950 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
       {/* Diff Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 bg-zinc-900/90 border-b border-zinc-800/80">
         <div className="flex items-center gap-2 text-xs font-medium text-zinc-300">

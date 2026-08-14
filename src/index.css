@@ -20,12 +20,11 @@
   }
 }
 
-/* Glass HUD Panel Custom Styling */
-.hud-glass-panel {
-  background: rgba(9, 9, 11, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+/* Solid Clean HUD Panel Styling (macOS Menu Bar Widget aesthetic) */
+.hud-panel {
+  background-color: #09090b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* Custom Scrollbar for Diff Viewer */

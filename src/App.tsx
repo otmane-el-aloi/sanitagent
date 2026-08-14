@@ -20,7 +20,7 @@ export function App() {
   useEffect(() => {
     // Listen for Tauri backend sanitization events
     const unlistenPromise = listen<SanitizationResult>("sanitization-complete", (event) => {
-      setResult(event.payload);
+      setResult({ ...event.payload });
     });
 
     // Keyboard shortcut Esc to hide HUD
