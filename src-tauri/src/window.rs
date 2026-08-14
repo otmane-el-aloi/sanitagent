@@ -17,6 +17,10 @@ pub fn configure_hud_window(window: &WebviewWindow) {
             // Set floating window level (NSFloatingWindowLevel = 5)
             ns_window.setLevel(NSFloatingWindowLevel);
 
+            // Allow window dragging/movement
+            ns_window.setMovable(true);
+            ns_window.setMovableByWindowBackground(true);
+
             // Non-activating panel collection behavior
             let collection_behavior = NSWindowCollectionBehavior::CanJoinAllSpaces
                 | NSWindowCollectionBehavior::Stationary
