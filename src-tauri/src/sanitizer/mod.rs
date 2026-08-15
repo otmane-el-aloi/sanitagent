@@ -1,6 +1,6 @@
+pub mod deterministic_sanitizer;
 pub mod diff;
-pub mod stage1;
-pub mod stage2;
+pub mod llm_sanitizer;
 pub mod tokens;
 
 use serde::{Deserialize, Serialize};
@@ -19,17 +19,19 @@ pub struct SanitizationResult {
 pub async fn process_pipeline(raw_text: String) -> SanitizationResult {
     let start_time = std::time::Instant::now();
 
-    // Stage 1: Deterministic Rule-Based Cleaner (<1ms)
-    let stage1_output = stage1::clean_stage1(&raw_text);
+    // Deterministic Multi-stage Cleaner (Secrets + Log Noise + Validated PII + Profanity)
+    let deterministic_report =
+        deterministic_sanitizer::sanitize(&raw_text, phonenumber::country::Id::FR);
+    let stage1_output = deterministic_report.text;
 
-    // Stage 2: Local LLM distillation with a bounded Ollama request
-    let (distilled_output, is_distilled) = stage2::distill_stage2(&stage1_output).await;
+    // Optional Stage: Local LLM distillation with bounded Ollama request
+    let (distilled_output, is_distilled) = llm_sanitizer::distill_llm(&stage1_output).await;
 
-    // Safety Pass: Re-run Stage 1 deterministic rules on LLM output to guarantee no leaked secrets
+    // Safety Pass: Re-run deterministic rules on LLM output to guarantee no leaked secrets or PII
     let sanitized_output = if is_distilled {
-        stage1::clean_stage1(&distilled_output)
+        deterministic_sanitizer::sanitize(&distilled_output, phonenumber::country::Id::FR).text
     } else {
-        distilled_output
+        stage1_output.clone()
     };
 
     // Token Statistics Calculation

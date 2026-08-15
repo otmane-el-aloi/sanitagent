@@ -9,7 +9,7 @@ const DISTILLATION_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// High-Speed Local LLM Distillation (Ollama Endpoint Bridge)
 /// Checks if Ollama is online and attempts local distillation with a bounded timeout.
-pub async fn distill_stage2(stage1_text: &str) -> (String, bool) {
+pub async fn distill_llm(stage1_text: &str) -> (String, bool) {
     let trimmed = stage1_text.trim();
     if trimmed.is_empty() {
         return (String::new(), false);
@@ -46,7 +46,7 @@ pub async fn distill_stage2(stage1_text: &str) -> (String, bool) {
             }
         }
         _ => {
-            // Graceful fallback to Stage 1 cleaned text
+            // Graceful fallback to input text
             (stage1_text.to_string(), false)
         }
     }
@@ -212,7 +212,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_distill_empty_input() {
-        let (output, is_distilled) = distill_stage2("   ").await;
+        let (output, is_distilled) = distill_llm("   ").await;
         assert_eq!(output, "");
         assert!(!is_distilled);
     }
@@ -220,7 +220,7 @@ mod tests {
     #[tokio::test]
     async fn test_distill_short_input_fastpath() {
         let input = "Error 404: Not Found";
-        let (output, is_distilled) = distill_stage2(input).await;
+        let (output, is_distilled) = distill_llm(input).await;
         assert_eq!(output, input);
         assert!(!is_distilled);
     }

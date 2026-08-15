@@ -20,7 +20,12 @@ tauri-plugin-clipboard-manager = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 regex = "1.10"
-lazy_static = "1.4"
+aho-corasick = "1"
+rustrict = "0.7"
+phonenumber = "0.3"
+email_address = "0.2"
+card-validate = "2"
+iban_validate = "4"
 tiktoken-rs = "0.6"
 similar = "2.6"
 tokio = { version = "1", features = ["full"] }
