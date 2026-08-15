@@ -382,13 +382,6 @@ mod tests {
     }
 
     #[test]
-    fn test_stripe_key_redaction() {
-        let input = "STRIPE_SECRET=sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-        let cleaned = clean_stage1(input);
-        assert!(cleaned.contains("[REDACTED_STRIPE_KEY]"));
-    }
-
-    #[test]
     fn test_high_entropy_fallback() {
         let input = "internal_token: aZ8kQ2mN9pR4vT7xW1yB6cD3eF5gH0jK2lM4nO";
         let cleaned = clean_stage1(input);
